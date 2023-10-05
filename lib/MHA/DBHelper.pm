@@ -126,6 +126,10 @@ use constant Blocked_Old_Password_Head    => '~' x 25;
 use constant Blocked_New_Password_Regexp  => qr/^[0-9a-fA-F]{40}\*$/o;
 use constant Released_New_Password_Regexp => qr/^\*[0-9a-fA-F]{40}$/o;
 
+use constant Set_Eventscheduler_SQL => "SET GLOBAL event_scheduler=ON";
+use constant Unset_Eventscheduler_SQL => "SET GLOBAL event_scheduler=OFF";
+use constant Is_Eventscheduler_SQL => "SELECT \@\@global.event_scheduler AS Value";
+
 sub new {
   my $class = shift;
   my $self  = {
@@ -268,6 +272,11 @@ sub is_binlog_enabled($) {
 sub is_read_only($) {
   my $self = shift;
   return $self->get_variable(Is_Readonly_SQL);
+}
+
+sub is_event_scheduler($) {
+  my $self = shift;
+  return $self->get_variable(Is_Eventscheduler_SQL);
 }
 
 sub has_gtid($) {
@@ -517,6 +526,27 @@ sub disable_read_only($) {
   }
   else {
     return $self->execute(Unset_Readonly_SQL);
+  }
+}
+
+sub enable_event_scheduler($) {
+  my $self = shift;
+  if ( $self->is_event_scheduler() eq "ON" ) {
+    return 0;
+  }
+  else {
+    return $self->execute(Set_Eventscheduler_SQL);
+  }
+}
+
+
+sub disable_event_scheduler($) {
+  my $self = shift;
+  if ( $self->is_event_scheduler() eq "OFF" ) {
+    return 0;
+  }
+  else {
+    return $self->execute(Unset_Eventscheduler_SQL);
   }
 }
 

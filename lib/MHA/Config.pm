@@ -31,7 +31,7 @@ use MHA::NodeUtil;
 use MHA::ManagerConst;
 
 my @PARAM_ARRAY =
-  qw/ hostname ip port ssh_host ssh_ip ssh_port ssh_connection_timeout ssh_options node_label candidate_master no_master ignore_fail skip_init_ssh_check skip_reset_slave user password repl_user repl_password disable_log_bin master_pid_file handle_raw_binlog ssh_user remote_workdir master_binlog_dir log_level manager_workdir manager_log check_repl_delay check_repl_filter latest_priority multi_tier_slave ping_interval ping_type secondary_check_script master_ip_failover_script master_ip_online_change_script shutdown_script report_script init_conf_load_script client_bindir client_libdir use_gtid_auto_pos/;
+  qw/ hostname ip port ssh_host ssh_ip ssh_port ssh_connection_timeout ssh_options node_label candidate_master no_master ignore_fail skip_init_ssh_check skip_reset_slave user password repl_user repl_password disable_log_bin master_pid_file handle_raw_binlog ssh_user remote_workdir master_binlog_dir log_level manager_workdir manager_log check_repl_delay check_repl_filter latest_priority multi_tier_slave ping_interval ping_type secondary_check_script master_ip_failover_script master_ip_online_change_script shutdown_script report_script init_conf_load_script client_bindir client_libdir use_gtid_auto_pos use_event_scheduler/;
 my %PARAM;
 for (@PARAM_ARRAY) { $PARAM{$_} = 1; }
 
@@ -290,6 +290,11 @@ sub parse_server {
   $value{client_libdir} = $param_arg->{client_libdir};
   if ( !defined( $value{client_libdir} ) ) {
     $value{client_libdir} = $default->{client_libdir};
+  }
+  $value{use_event_scheduler} = $param_arg->{use_event_scheduler};
+  if ( !defined( $value{use_event_scheduler} ) ) {
+    $value{use_event_scheduler} = $default->{use_event_scheduler};
+    $value{use_event_scheduler} = '0' unless ( $value{use_event_scheduler} );
   }
 
   my $server = new MHA::Server();

@@ -328,7 +328,7 @@ sub force_shutdown_internal($) {
 
   if ( $dead_master->{master_ip_failover_script} ) {
     my $command =
-"$dead_master->{master_ip_failover_script} --orig_master_host=$dead_master->{hostname} --orig_master_ip=$dead_master->{ip} --orig_master_port=$dead_master->{port}";
+"$dead_master->{master_ip_failover_script} --orig_master_host=$dead_master->{hostname} --orig_master_ip=$dead_master->{ip} --orig_master_port=$dead_master->{port} --use_event_scheduler=$dead_master->{use_event_scheduler}";
     if ( $_real_ssh_reachable == 1 ) {
       $command .=
         " --command=stopssh" . " --ssh_user=$dead_master->{ssh_user} ";
@@ -1591,7 +1591,7 @@ sub recover_master($$$$) {
 
   if ( $new_master->{master_ip_failover_script} ) {
     my $command =
-"$new_master->{master_ip_failover_script} --command=start --ssh_user=$new_master->{ssh_user} --orig_master_host=$dead_master->{hostname} --orig_master_ip=$dead_master->{ip} --orig_master_port=$dead_master->{port} --new_master_host=$new_master->{hostname} --new_master_ip=$new_master->{ip} --new_master_port=$new_master->{port} --new_master_user=$new_master->{escaped_user}";
+"$new_master->{master_ip_failover_script} --command=start --ssh_user=$new_master->{ssh_user} --orig_master_host=$dead_master->{hostname} --orig_master_ip=$dead_master->{ip} --orig_master_port=$dead_master->{port} --new_master_host=$new_master->{hostname} --new_master_ip=$new_master->{ip} --new_master_port=$new_master->{port} --new_master_user=$new_master->{escaped_user} --use_event_scheduler=$new_master->{use_event_scheduler}";
     $command .=
       $dead_master->get_ssh_args_if( 1, "orig", $_real_ssh_reachable );
     $command .= $new_master->get_ssh_args_if( 2, "new", 1 );
