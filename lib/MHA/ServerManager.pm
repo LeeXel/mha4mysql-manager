@@ -1291,7 +1291,7 @@ sub get_new_master_binlog_position($$) {
     if ( $self->is_gtid_auto_pos_enabled() ) {
       $log->info(
         sprintf(
-" All other slaves should start replication from here. Statement should be: CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_AUTO_POSITION=1, MASTER_USER='%s', MASTER_PASSWORD='xxx';",
+" All other slaves should start replication from here. Statement should be: CHANGE REPLICATION SOURCE TO SOURCE_HOST='%s', SOURCE_PORT=%d, SOURCE_AUTO_POSITION=1, SOURCE_USER='%s', SOURCE_PASSWORD='xxx';",
           ( $target->{hostname} eq $target->{ip} )
           ? $target->{hostname}
           : ("$target->{hostname} or $target->{ip}"),
@@ -1304,7 +1304,7 @@ sub get_new_master_binlog_position($$) {
     else {
       $log->info(
         sprintf(
-" All other slaves should start replication from here. Statement should be: CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_LOG_FILE='%s', MASTER_LOG_POS=%d, MASTER_USER='%s', MASTER_PASSWORD='xxx';",
+" All other slaves should start replication from here. Statement should be: CHANGE REPLICATION SOURCE TO SOURCE_HOST='%s', SOURCE_PORT=%d, SOURCE_LOG_FILE='%s', SOURCE_LOG_POS=%d, SOURCE_USER='%s', SOURCE_PASSWORD='xxx';",
           ( $target->{hostname} eq $target->{ip} )
           ? $target->{hostname}
           : ("$target->{hostname} or $target->{ip}"),

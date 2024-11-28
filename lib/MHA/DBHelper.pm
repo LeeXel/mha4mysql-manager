@@ -68,28 +68,28 @@ use constant Auto_Position               => "Auto_Position";
 use constant Set_Long_Wait_Timeout_SQL => "SET wait_timeout=86400";
 use constant Show_One_Variable_SQL     => "SHOW GLOBAL VARIABLES LIKE ?";
 use constant Change_Master_SQL =>
-"CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='%s', MASTER_PASSWORD='%s', MASTER_LOG_FILE='%s', MASTER_LOG_POS=%d";
+"CHANGE REPLICATION SOURCE TO SOURCE_HOST='%s', SOURCE_PORT=%d, SOURCE_USER='%s', SOURCE_PASSWORD='%s', SOURCE_LOG_FILE='%s', SOURCE_LOG_POS=%d";
 use constant Change_Master_NoPass_SQL =>
-"CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='%s', MASTER_LOG_FILE='%s', MASTER_LOG_POS=%d";
+"CHANGE REPLICATION SOURCE TO SOURCE_HOST='%s', SOURCE_PORT=%d, SOURCE_USER='%s', SOURCE_LOG_FILE='%s', SOURCE_LOG_POS=%d";
 use constant Change_Master_Gtid_SQL =>
-"CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='%s', MASTER_PASSWORD='%s', MASTER_AUTO_POSITION=1";
+"CHANGE REPLICATION SOURCE TO SOURCE_HOST='%s', SOURCE_PORT=%d, SOURCE_USER='%s', SOURCE_PASSWORD='%s', SOURCE_AUTO_POSITION=1";
 use constant Change_Master_Gtid_NoPass_SQL =>
-"CHANGE MASTER TO MASTER_HOST='%s', MASTER_PORT=%d, MASTER_USER='%s', MASTER_AUTO_POSITION=1";
-use constant Reset_Slave_Master_Host_SQL => "RESET SLAVE /*!50516 ALL */";
-use constant Reset_Slave_SQL             => "RESET SLAVE";
-use constant Change_Master_Clear_SQL     => "CHANGE MASTER TO MASTER_HOST=''";
-use constant Show_Slave_Status_SQL       => "SHOW SLAVE STATUS";
+"CHANGE REPLICATION SOURCE TO SOURCE_HOST='%s', SOURCE_PORT=%d, SOURCE_USER='%s', SOURCE_AUTO_POSITION=1";
+use constant Reset_Slave_Master_Host_SQL => "RESET REPLICA /*!50516 ALL */";
+use constant Reset_Slave_SQL             => "RESET REPLICA";
+use constant Change_Master_Clear_SQL     => "CHANGE REPLICATION SOURCE TO SOURCE_HOST=''";
+use constant Show_Slave_Status_SQL       => "SHOW REPLICA STATUS";
 
 # i_s.processlist was not supported in older versions
 #use constant Show_Processlist_SQLThread_SQL=>"select * from information_schema.processlist where user='system user' and state like 'Has read all relay log%';";
 use constant Show_Processlist_SQL   => "SHOW PROCESSLIST";
-use constant Show_Master_Status_SQL => "SHOW MASTER STATUS";
-use constant Stop_IO_Thread_SQL     => "STOP SLAVE IO_THREAD";
-use constant Start_IO_Thread_SQL    => "START SLAVE IO_THREAD";
-use constant Start_Slave_SQL        => "START SLAVE";
-use constant Stop_Slave_SQL         => "STOP SLAVE";
-use constant Start_SQL_Thread_SQL   => "START SLAVE SQL_THREAD";
-use constant Stop_SQL_Thread_SQL    => "STOP SLAVE SQL_THREAD";
+use constant Show_Master_Status_SQL => "SHOW BINARY LOG STATUS";
+use constant Stop_IO_Thread_SQL     => "STOP REPLICA IO_THREAD";
+use constant Start_IO_Thread_SQL    => "START REPLICA IO_THREAD";
+use constant Start_Slave_SQL        => "START REPLICA";
+use constant Stop_Slave_SQL         => "STOP REPLICA";
+use constant Start_SQL_Thread_SQL   => "START REPLICA SQL_THREAD";
+use constant Stop_SQL_Thread_SQL    => "STOP REPLICA SQL_THREAD";
 use constant Get_Basedir_SQL        => "SELECT \@\@global.basedir AS Value";
 use constant Get_Datadir_SQL        => "SELECT \@\@global.datadir AS Value";
 use constant Get_Num_Workers_SQL =>
@@ -108,7 +108,7 @@ use constant Unset_Log_Bin_Local_SQL  => "SET sql_log_bin=0";
 use constant Set_Log_Bin_Local_SQL    => "SET sql_log_bin=1";
 use constant Rename_User_SQL          => "RENAME USER '%s'\@'%%' TO '%s'\@'%%'";
 use constant Master_Pos_Wait_NoTimeout_SQL =>
-  "SELECT MASTER_POS_WAIT(?,?,0) AS Result";
+  "SELECT SOURCE_POS_WAIT(?,?,0) AS Result";
 use constant Gtid_Wait_NoTimeout_SQL =>
   "SELECT WAIT_UNTIL_SQL_THREAD_AFTER_GTIDS(?,0) AS Result";
 use constant Get_Connection_Id_SQL  => "SELECT CONNECTION_ID() AS Value";
@@ -598,7 +598,19 @@ sub check_slave_status {
   $status{Status} = 0;
   $href = $sth->fetchrow_hashref;
 
-  for my $key (
+  my @key_s = (
+    "Replica_IO_State",        "Source_Host",
+    "Source_Port",           "Source_User",
+    "Replica_IO_Running",      "Replica_SQL_Running",
+    "Source_Log_File",       "Read_Source_Log_Pos",
+    "Relay_Source_Log_File", "Last_Errno",
+    "Last_Error",            "Exec_Source_Log_Pos",
+    "Relay_Log_File",        "Relay_Log_Pos",
+    "Seconds_Behind_Source", "Retrieved_Gtid_Set",
+    "Executed_Gtid_Set",     "Auto_Position"
+  );
+
+  my @key = (
     Slave_IO_State,        Master_Host,
     Master_Port,           Master_User,
     Slave_IO_Running,      Slave_SQL_Running,
@@ -608,9 +620,11 @@ sub check_slave_status {
     Relay_Log_File,        Relay_Log_Pos,
     Seconds_Behind_Master, Retrieved_Gtid_Set,
     Executed_Gtid_Set,     Auto_Position
-    )
+  );
+
+  foreach my $i (0 .. $#key)
   {
-    $status{$key} = $href->{$key};
+    $status{$key[$i]} = $href->{$key_s[$i]};
   }
 
   if ( !$status{Master_Host}
@@ -669,12 +683,12 @@ sub read_all_relay_log {
     }
     elsif ( !$io_thread_should_run && $status{Slave_IO_Running} eq "Yes" ) {
       $status{Status} = 3;
-      $status{Errstr} = "Slave IO thread is running! Check master status.";
+      $status{Errstr} = "Replica IO thread is running! Check source status.";
       return %status;
     }
     elsif ( $status{Slave_SQL_Running} eq "No" ) {
       $status{Status} = 4;
-      $status{Errstr} = "SQL thread is not running! Check slave status.";
+      $status{Errstr} = "SQL thread is not running! Check replica status.";
       return %status;
     }
     elsif ( ( $status{Master_Log_File} eq $status{Relay_Master_Log_File} )
@@ -686,7 +700,7 @@ sub read_all_relay_log {
 
     if ($io_thread_should_run) {
       if (!$status{Slave_IO_State}
-        || $status{Slave_IO_State} !~ m/Waiting for master to send event/ )
+        || $status{Slave_IO_State} !~ m/Waiting for source to send event/ )
       {
         $sql_thread_check = 0;
       }
@@ -705,7 +719,7 @@ sub read_all_relay_log {
           && defined($state) )
         {
           if ( $state =~ m/^Has read all relay log/
-            || $state =~ m/^Slave has read all relay log/ )
+            || $state =~ m/^Replica has read all relay log/ )
           {
             $sql_thread_done = 1;
             if ( $num_worker_threads == 0 ) {
